@@ -1,23 +1,25 @@
 import gradio as gradio
+import torch, os
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
-import os
-from openai import OpenAI
 
 load_dotenv()
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+llm = os.getenv("LLM")
 
 def ask(text):
-  completion = openai_client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[{
-      "role": "user",
-      "content": text
-    }],
-    temperature=0
-  )
+  tokenizer = AutoTokenizer.from_pretrained(llm)
+  model = AutoModelForCausalLM.from_pretrained(llm, torch_dtype=torch.bfloat16)
 
-  return completion.choices[0].message.content
+  inputs = tokenizer(text, return_tensors="pt").to(model.device)
+
+  input_length = inputs.input_ids.shape[1]
+
+  outputs = model.generate(**inputs, max_new_tokens=100, temperature=0.7, return_dict_in_generate=True)
+
+  tokens = outputs.sequences[0, input_length:]
+
+  return tokenizer.decode(tokens)
 
 with gradio.Blocks() as server:
   with gradio.Tab("LLM Inferencing"):
