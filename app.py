@@ -1,5 +1,5 @@
 import gradio as gradio
-import torch
+import torch, os
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 
