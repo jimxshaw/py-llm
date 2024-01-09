@@ -11,11 +11,13 @@ def ask(text):
   tokenizer = AutoTokenizer.from_pretrained(llm)
   model = AutoModelForCausalLM.from_pretrained(llm, torch_dtype=torch.bfloat16)
 
-  inputs = tokenizer(text, return_tensors="pt").to(model.device)
+  prompt = f'<human>: {text}\n<bot>:'
+
+  inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
   input_length = inputs.input_ids.shape[1]
 
-  outputs = model.generate(**inputs, max_new_tokens=100, temperature=0.7, return_dict_in_generate=True)
+  outputs = model.generate(**inputs, max_new_tokens=100, return_dict_in_generate=True)
 
   tokens = outputs.sequences[0, input_length:]
 
