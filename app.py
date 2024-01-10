@@ -1,5 +1,5 @@
 import gradio as gradio
-import torch, os
+import torch, os, re
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 
@@ -7,11 +7,26 @@ load_dotenv()
 
 llm = os.getenv("LLM")
 
+def post_process(output):
+  print(output)
+
+  parts = output.split("<bot>:", 1)
+
+  if len(parts) > 1:
+      response_parts = re.split(r"<human>:|<bot>:", parts[1], 1)
+      response = response_parts[0].strip().rstrip("., ")
+  else:
+      response = output.strip().rstrip("., ")
+
+  print(response)
+
+  return response
+
 def ask(text):
   tokenizer = AutoTokenizer.from_pretrained(llm)
   model = AutoModelForCausalLM.from_pretrained(llm, torch_dtype=torch.bfloat16)
 
-  prompt = f'<human>: {text}\n<bot>:'
+  prompt = f"<human>: {text}\n<bot>:"
 
   inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
@@ -21,7 +36,9 @@ def ask(text):
 
   tokens = outputs.sequences[0, input_length:]
 
-  return tokenizer.decode(tokens)
+  raw_output = tokenizer.decode(tokens)
+
+  return post_process(raw_output)
 
 with gradio.Blocks() as server:
   with gradio.Tab("LLM Inferencing"):
